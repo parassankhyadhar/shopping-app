@@ -1,0 +1,41 @@
+trigger:
+- main
+
+variables:
+  acrName: "k8sacr.azurecr.io"
+  imageName: "shopping-app"
+  tag: "$(Build.BuildId)"
+
+stages:
+  - stage: Build_and_Push
+    displayName: Build and Push to ACR
+    jobs:
+      - job: Build
+        displayName: Build Image
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+        - task: Docker@2
+          inputs:
+            containerRegistry: 'acrsc'
+            repository: $(imageName)
+            command: 'buildAndPush'
+            Dockerfile: '**/Dockerfile'
+        - task: KubernetesManifest@1
+          inputs:
+            action: 'createSecret'
+            connectionType: 'kubernetesServiceConnection'
+            kubernetesServiceConnection: 'akssc'
+            namespace: 'default'
+            secretType: 'dockerRegistry'
+            secretName: 'acr-secret'
+            dockerRegistryEndpoint: 'acrsc'
+        - task: KubernetesManifest@1
+          inputs:
+            action: 'deploy'
+            connectionType: 'kubernetesServiceConnection'
+            kubernetesServiceConnection: 'akssc'
+            namespace: 'default'
+            manifests: '$(System.DefaultWorkingDirectory)/manifests/deployment.yaml'
+            containers: 'k8sacr.azurecr.io/shopping-app:$(tag)'
+            imagePullSecrets: 'acr-secret'

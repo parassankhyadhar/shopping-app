@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  shopping-app-deployment
+  labels:
+    name:  shopping-app-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: shopping-app-pod
+  strategy:
+    rollingUpdate:
+      maxSurge: 4
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: shopping-app-pod
+    spec:
+      containers:
+      - image: k8sacr.azurecr.io/shopping-app:latest
+        name:  app-con
+      restartPolicy: Always
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopping-app-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+  selector:
+    name: shopping-app-pod
